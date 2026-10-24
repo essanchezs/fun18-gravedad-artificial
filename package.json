@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "headless": "tsx scripts/headless.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.15",
