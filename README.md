@@ -7,8 +7,18 @@ Proyecto de Simulación, FUN-18 Física I (Universidad CENFOTEC, 2026-C3).
 ```bash
 pnpm install       # instalar dependencias
 pnpm test          # correr las pruebas de la librería
-pnpm headless      # escenario fijo sin interfaz; escribe el CSV  (pendiente: script de Persona 2)
+pnpm headless      # escenario fijo sin interfaz; escribe salida.csv
 ```
+
+`pnpm headless otra-corrida.csv` escribe el CSV con otro nombre.
+
+## Estructura del repositorio
+
+| Carpeta | Contenido |
+|---|---|
+| `src/fisica/` | La librería de física: toda la física del proyecto, en SI y sin dependencias de la interfaz |
+| `tests/` | Pruebas unitarias de la librería (Vitest) |
+| `scripts/headless.ts` | Ejecución sin interfaz: corre el escenario de referencia y exporta el CSV |
 
 ## Librería de física (`src/fisica/`)
 
@@ -88,7 +98,18 @@ Campos de `Estado` (solo lectura):
 |---|---|---|
 | `aceleracionCentripeta(omega, r)` | ω [rad/s], r [m] | a_c [m/s²] = ω²·r |
 | `gradienteCabezaPies(omega, R, h_t)` | ω [rad/s], R [m], h_t [m] | Δa/a [--] (0 si ω = 0) |
-| `evaluarDictamen(estado, limites)` | `Estado` sin `dictamen`, `Limites` | `Dictamen` |
+| `evaluarDictamen(estado, limites)` | `Estado` sin `dictamen`, `Limites` | `Dictamen`: `apto` y la lista de violaciones (gravedad fuera de 0,8–1,1 g, \|ω\| sobre 2,0 rpm, gradiente sobre 20 %), cada una con su valor y su límite en SI |
+
+### `orbita.ts`
+
+Contexto orbital de la estación. No depende de la rotación del hábitat, solo de la altitud.
+
+| Función | Recibe | Devuelve |
+|---|---|---|
+| `gravedadOrbital(h)` | h [m] | g [m/s²] = G·M_T/(R_T + h)² |
+| `velocidadOrbital(h)` | h [m] | v [m/s] = √(G·M_T/(R_T + h)) |
+| `periodoOrbital(h)` | h [m] | T [s] = 2π(R_T + h)/v |
+| `energiaOrbital(m, h)` | m [kg], h [m] | E_mec [J] = −G·M_T·m/(2(R_T + h)) |
 
 ### `tripulante.ts`
 
@@ -135,3 +156,29 @@ const final = serie[serie.length - 1];   // final.a_piso ≈ 8,30 m/s² (0,85 g)
 | E_rot = τ·Δθ | 3,817×10⁸ J | ≈ 3,8×10⁸ |
 | Gravedad con 0 t / 20 t / 40 t subidas al aro | 0,948 g / 0,846 g / 0,760 g | 0,95 / 0,85 / 0,76 g |
 | Variación de L mientras se mueve el ascensor | 0 (exacta) | horizontal |
+
+## Pruebas (`pnpm test`)
+
+70 pruebas en 6 archivos de `tests/`. Cada una compara el motor contra una fórmula cerrada o contra los
+valores calculados a mano en el Avance 1, con la tolerancia declarada en la propia prueba.
+
+| Archivo | Qué valida |
+|---|---|
+| `simulador.test.ts` | **Validación analítica 1:** encendido con torque constante, ω = α·t y θ = ½·α·t² (0,1968 rad/s y 95,4 rad a los 970 s). **2:** trabajo y energía, τ·Δθ = ΔE_rot. **3:** conservación de L mientras el ascensor se traslada, I₁·ω₁ = I₂·ω₂ |
+| `inercia.test.ts` | Fórmulas de aro, hub y masa puntual; inercia de los radios contra integración numérica; total ≈ 1,97×10¹⁰ kg·m² |
+| `rotacion.test.ts` | α = τ/I, L = I·ω, E_rot = L²/(2I) y W = τ·Δθ |
+| `habitabilidad.test.ts` | 0,95 g en la referencia, gradiente = h_t/R, y el dictamen de 0 t, 20 t (APTO) y 40 t (NO APTO) |
+| `orbita.test.ts` | g, v, T y E a 400 km (8,69 m/s², 7 673 m/s, 92,4 min, −1,47×10¹³ J), v²/r = g y tercera ley de Kepler |
+| `limites.test.ts` | Casos límite: estación detenida, torque cero, frenado hasta ω = 0, ascensor sin pasarse del objetivo, cambio de dt y caminata del tripulante |
+
+## Ejecución headless (`pnpm headless`)
+
+Corre la configuración de referencia sin interfaz: encendido de 970 s y, 60 s después, traslado de 20 t del
+hub al aro, con dt = 0,05 s. Imprime un resumen (I, ω, gravedad, deriva de L y dictamen final) y escribe
+`salida.csv` con una fila por segundo simulado y estas columnas:
+
+`t_s`, `fase`, `omega_rad_s`, `omega_rpm`, `alpha_rad_s2`, `I_kg_m2`, `L_kg_m2_s`, `E_rot_J`, `r_a_m`,
+`v_a_m_s`, `a_piso_m_s2`, `a_piso_g`, `gradiente_pct`, `peso_t_N`, `a_cor_m_s2`, `apto`, `violaciones`
+
+Para auditar el modelo sin abrir la consola: la columna `L_kg_m2_s` se mantiene constante desde que se
+apagan los propulsores, y `a_piso_g` pasa de 0,95 a 0,85 durante el traslado.
