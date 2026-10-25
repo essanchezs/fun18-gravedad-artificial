@@ -451,3 +451,158 @@ button.primario {
     transition: none;
   }
 }
+
+/* Panel de parámetros editable */
+.panel-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.panel-cabecera h2 {
+  margin-bottom: 4px;
+}
+
+button.enlace {
+  min-height: 0;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--acento);
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+
+button.enlace:disabled {
+  color: var(--tinta-suave);
+  text-decoration: none;
+}
+
+.grupo-param {
+  min-width: 0;
+  margin: 12px 0 0;
+  padding: 8px 0 0;
+  border: none;
+  border-top: 1px solid var(--borde);
+}
+
+.grupo-param legend {
+  padding: 0 8px 0 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+
+.param {
+  margin: 6px 0 12px;
+}
+
+.param-etiqueta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.param-simbolo {
+  min-width: 46px;
+  font-family: var(--fuente-mono);
+  font-weight: 700;
+  color: var(--acento);
+}
+
+.param-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.param-numero {
+  width: 100%;
+  max-width: 150px;
+  padding: 5px 8px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: var(--superficie);
+  color: var(--tinta);
+  font: 0.85rem var(--fuente-mono);
+  text-align: right;
+}
+
+.param-numero:disabled {
+  opacity: 0.55;
+}
+
+.param-numero:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.param-unidad {
+  min-width: 34px;
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
+}
+
+.param-deslizador {
+  display: block;
+  width: 100%;
+  margin: 6px 0 0;
+  accent-color: var(--acento);
+}
+
+.param-nota {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--tinta-suave);
+}
+
+.calculado small {
+  display: block;
+  margin-top: 2px;
+  color: var(--tinta-suave);
+  font-size: 0.72rem;
+}
+
+/* Gráficas en tiempo real */
+.graficas {
+  display: grid;
+  gap: 16px;
+}
+
+.grafica {
+  margin: 0;
+  padding: 12px 12px 6px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.grafica figcaption {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.grafica figcaption strong {
+  font-size: 0.85rem;
+}
+
+.grafica figcaption span {
+  font-size: 0.75rem;
+  color: var(--tinta-suave);
+}
+
+.grafica-lienzo {
+  width: 100%;
+  min-height: 230px;
+}
+
+.grafica-lienzo .u-legend {
+  font-size: 0.75rem;
+  color: var(--tinta);
+}

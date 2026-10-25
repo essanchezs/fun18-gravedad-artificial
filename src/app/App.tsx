@@ -6,8 +6,10 @@ import { useMemo, useState } from 'react';
 import { CONFIG_REFERENCIA } from '../fisica/constantes';
 import type { ConfigEstacion, Fase } from '../fisica/tipos';
 import { PanelCertificacion } from './certificacion/PanelCertificacion';
+import { PanelControles } from './controles/PanelControles';
+import { PanelGraficas } from './graficas/PanelGraficas';
 import { FACTORES_TIEMPO, useSimulacion, type Simulacion } from './simulacion/useSimulacion';
-import { aKm, aRpm, aToneladas, cientifico, fijo } from './unidades';
+import { aRpm, aToneladas, fijo } from './unidades';
 import { CorteTransversal } from './vista/CorteTransversal';
 
 const NOMBRE_FASE: Record<Fase, string> = {
@@ -44,36 +46,6 @@ function BarraControl({ sim }: { readonly sim: Simulacion }) {
   );
 }
 
-function Configuracion({ config, I }: { readonly config: ConfigEstacion; readonly I: number }) {
-  const filas: Array<[string, string]> = [
-    ['Radio del aro', `${fijo(config.R, 0)} m`],
-    ['Masa del aro', `${cientifico(config.M_aro, 1)} kg`],
-    ['Masa del hub', `${cientifico(config.M_hub, 1)} kg`],
-    ['Radio del hub', `${fijo(config.r_hub, 0)} m`],
-    ['N.º de radios', `${config.n}`],
-    ['Masa por radio', `${cientifico(config.m_radio, 1)} kg`],
-    ['Torque τ', `${cientifico(config.tau, 1)} N·m`],
-    ['Duración del encendido', `${fijo(config.t_enc, 0)} s`],
-    ['Altitud', `${fijo(aKm(config.h), 0)} km`],
-  ];
-  return (
-    <section className="panel" aria-labelledby="titulo-config">
-      <h2 id="titulo-config">Configuración</h2>
-      <dl className="datos">
-        {filas.map(([k, v]) => (
-          <div key={k}>
-            <dt>{k}</dt>
-            <dd>{v}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="calculado">
-        I calculado = <strong>{cientifico(I, 2)} kg·m²</strong>
-      </p>
-    </section>
-  );
-}
-
 function Operaciones({ sim }: { readonly sim: Simulacion }) {
   const { config } = sim.estado;
   const enAro = sim.estado.r_a >= config.R;
@@ -105,7 +77,7 @@ function Operaciones({ sim }: { readonly sim: Simulacion }) {
 }
 
 export function App() {
-  const [config] = useState<ConfigEstacion>(CONFIG_REFERENCIA);
+  const [config, setConfig] = useState<ConfigEstacion>(CONFIG_REFERENCIA);
   const sim = useSimulacion(config);
   const { estado } = sim;
   const resumen = useMemo(
@@ -122,8 +94,14 @@ export function App() {
 
       <main className="zonas">
         <div className="columna izquierda">
-          <Configuracion config={config} I={estado.I} />
           <Operaciones sim={sim} />
+          <PanelControles
+            config={config}
+            I={estado.I}
+            bloqueado={sim.corriendo}
+            onCambiar={setConfig}
+            onRestablecer={() => setConfig(CONFIG_REFERENCIA)}
+          />
         </div>
 
         <section className="panel visualizacion" aria-labelledby="titulo-vis">
@@ -139,7 +117,7 @@ export function App() {
 
         <div className="columna derecha">
           <PanelCertificacion estado={estado} historial={sim.historial} />
-          {/* Gráficas en tiempo real: leen sim.serie y se redibujan con sim.version. */}
+          <PanelGraficas serie={sim.serie} version={sim.version} />
         </div>
       </main>
     </div>
