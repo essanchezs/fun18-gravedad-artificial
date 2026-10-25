@@ -1,0 +1,16 @@
+{
+  "//": "Interfaz (src/app/): agrega el DOM y JSX. La librería se revisa con tsconfig.json, sin DOM.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src/app", "vite.config.ts"]
+}
