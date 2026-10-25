@@ -6,8 +6,11 @@ Proyecto de Simulación, FUN-18 Física I (Universidad CENFOTEC, 2026-C3).
 
 ```bash
 pnpm install       # instalar dependencias
-pnpm test          # correr las pruebas de la librería
+pnpm test          # correr las pruebas de la librería y de la interfaz
 pnpm headless      # escenario fijo sin interfaz; escribe salida.csv
+pnpm dev           # consola en modo desarrollo (http://localhost:5173/fun18-gravedad-artificial/)
+pnpm build         # revisa tipos y compila el sitio estático en dist/
+pnpm typecheck     # tipos de la librería (sin DOM) y de la interfaz por separado
 ```
 
 `pnpm headless otra-corrida.csv` escribe el CSV con otro nombre.
@@ -19,6 +22,8 @@ pnpm headless      # escenario fijo sin interfaz; escribe salida.csv
 | `src/fisica/` | La librería de física: toda la física del proyecto, en SI y sin dependencias de la interfaz |
 | `tests/` | Pruebas unitarias de la librería (Vitest) |
 | `scripts/headless.ts` | Ejecución sin interfaz: corre el escenario de referencia y exporta el CSV |
+| `src/app/` | La consola web (React + Canvas 2D). Consume la librería; la librería no la conoce |
+| `tests/app/` | Pruebas de la lógica de la consola: unidades, bucle, certificación y geometría del dibujo |
 
 ## Librería de física (`src/fisica/`)
 
@@ -159,7 +164,7 @@ const final = serie[serie.length - 1];   // final.a_piso ≈ 8,30 m/s² (0,85 g)
 
 ## Pruebas (`pnpm test`)
 
-70 pruebas en 6 archivos de `tests/`. Cada una compara el motor contra una fórmula cerrada o contra los
+70 pruebas de la librería en 6 archivos de `tests/` (más las de la consola en `tests/app/`, abajo). Cada una compara el motor contra una fórmula cerrada o contra los
 valores calculados a mano en el Avance 1, con la tolerancia declarada en la propia prueba.
 
 | Archivo | Qué valida |
@@ -182,3 +187,30 @@ hub al aro, con dt = 0,05 s. Imprime un resumen (I, ω, gravedad, deriva de L y 
 
 Para auditar el modelo sin abrir la consola: la columna `L_kg_m2_s` se mantiene constante desde que se
 apagan los propulsores, y `a_piso_g` pasa de 0,95 a 0,85 durante el traslado.
+
+## Consola (`src/app/`)
+
+La interfaz consume la librería y nunca al revés: `tsconfig.json` revisa `src/fisica/` y `tests/` sin los
+tipos del DOM, así que si la librería tocara `document` o `window` no compilaría. La interfaz se revisa
+aparte con `tsconfig.app.json`. Las unidades de lectura (rpm, g, km, t, MJ, %) existen solo en
+`src/app/unidades.ts`.
+
+| Módulo | Responsabilidad |
+|---|---|
+| `unidades.ts` | Conversión SI ⇄ unidades de lectura y formato con coma decimal |
+| `simulacion/motor.ts` | Contrato `Motor` (`crearEstado`, `paso`); en producción es la librería real |
+| `simulacion/corrida.ts` | Avanza una corrida de a k pasos con las mismas reglas de `simular()`; órdenes en vivo del ascensor |
+| `simulacion/useSimulacion.ts` | Bucle `requestAnimationFrame`: k = factor de tiempo × Δt real / dt, con dt fijo de 0,05 s |
+| `vista/geometria.ts`, `vista/CorteTransversal.tsx` | Corte transversal en Canvas 2D a partir de θ, r_a y a_piso del Estado |
+| `certificacion/` | Panel de certificación: muestra `estado.dictamen` (no lo recalcula) e historial de violaciones |
+
+**La consola y el headless dan lo mismo.** `tests/app/corrida.test.ts` corre la maniobra de referencia
+avanzando de a 1, 37 y 600 pasos, como lo hacen los cuadros de animación, y comprueba que la serie es
+idéntica, estado por estado, a la de `simular()`. Por eso el dictamen que se ve en el panel es el mismo que
+se audita en `salida.csv`. `tests/app/motorFalso.ts` es un motor guionado con el mismo contrato, para
+forzar estados (por ejemplo NO APTO) sin simular 1 000 s.
+
+**Uso.** *Iniciar* corre el encendido (τ durante t_enc) y la simulación se detiene sola al alcanzar un giro
+constante. Entonces se habilita *Mover al aro / Mover al hub*: la corrida se reanuda, el panel certifica
+todo el trayecto del ascensor y vuelve a detenerse en el estado final estable. El factor de tiempo (1× a
+200×) solo cambia cuántos pasos se ejecutan por cuadro, nunca dt.
