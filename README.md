@@ -7,6 +7,7 @@ Proyecto de Simulación, FUN-18 Física I (Universidad CENFOTEC, 2026-C3).
 ```bash
 pnpm install       # instalar dependencias
 pnpm test          # correr las pruebas de la librería y de la interfaz
+pnpm lint          # ESLint: estilo de código y la regla que aísla src/fisica de la interfaz
 pnpm headless      # escenario fijo sin interfaz; escribe salida.csv
 pnpm dev           # consola en modo desarrollo (http://localhost:5173/fun18-gravedad-artificial/)
 pnpm build         # revisa tipos y compila el sitio estático en dist/
@@ -24,6 +25,9 @@ pnpm typecheck     # tipos de la librería (sin DOM) y de la interfaz por separa
 | `scripts/headless.ts` | Ejecución sin interfaz: corre el escenario de referencia y exporta el CSV |
 | `src/app/` | La consola web (React + Canvas 2D). Consume la librería; la librería no la conoce |
 | `tests/app/` | Pruebas de la lógica de la consola: unidades, bucle, certificación y geometría del dibujo |
+| `.github/workflows/` | Pruebas y despliegue automático: solo se publica si pasan lint, tipos y pruebas |
+| `eslint.config.js` | Reglas de ESLint, entre ellas la que impide que `src/fisica/` importe la interfaz o use el navegador |
+| `CLAUDE.md` | Reglas del proyecto para quien lo modifique (persona o asistente) |
 
 ## Librería de física (`src/fisica/`)
 
@@ -203,6 +207,9 @@ aparte con `tsconfig.app.json`. Las unidades de lectura (rpm, g, km, t, MJ, %) e
 | `simulacion/useSimulacion.ts` | Bucle `requestAnimationFrame`: k = factor de tiempo × Δt real / dt, con dt fijo de 0,05 s |
 | `vista/geometria.ts`, `vista/CorteTransversal.tsx` | Corte transversal en Canvas 2D a partir de θ, r_a y a_piso del Estado |
 | `certificacion/` | Panel de certificación: muestra `estado.dictamen` (no lo recalcula) e historial de violaciones |
+| `controles/parametros.ts`, `controles/PanelControles.tsx` | Los 13 parámetros de la Tabla 5 como controles editables (casilla numérica y deslizador), con rango, paso y unidad de lectura |
+| `graficas/muestras.ts` | Submuestreo de `sim.serie`: un punto cada 0,5 s simulados para dibujar; los datos completos se conservan en la serie |
+| `graficas/GraficaTiempoReal.tsx`, `graficas/PanelGraficas.tsx` | Gráficas 1 (ω y α), 2 (gravedad aparente con la banda 0,8–1,1 g₀) y 3 (momento angular) con uPlot |
 
 **La consola y el headless dan lo mismo.** `tests/app/corrida.test.ts` corre la maniobra de referencia
 avanzando de a 1, 37 y 600 pasos, como lo hacen los cuadros de animación, y comprueba que la serie es
@@ -214,3 +221,40 @@ forzar estados (por ejemplo NO APTO) sin simular 1 000 s.
 constante. Entonces se habilita *Mover al aro / Mover al hub*: la corrida se reanuda, el panel certifica
 todo el trayecto del ascensor y vuelve a detenerse en el estado final estable. El factor de tiempo (1× a
 200×) solo cambia cuántos pasos se ejecutan por cuadro, nunca dt.
+
+### Parámetros ajustables
+
+El panel *Configuración* permite cambiar los 13 parámetros de la Tabla 5 del Avance 1 (geometría, encendido,
+ascensor, tripulante y órbita), con casilla numérica y deslizador. Lo que se escribe se acota al rango, se ajusta
+al paso y se convierte a SI con `unidades.ts` (masas en t, altitud en km). Cambiar un parámetro crea una configuración
+nueva y `useSimulacion` reinicia la corrida, porque un resultado mezclado no sería válido. Mientras la simulación corre
+los campos están bloqueados; basta con pausar para editarlos. El botón *Valores de referencia* restablece la
+configuración de validación. `I calculado` se muestra como resultado, no como entrada.
+
+### Gráficas en tiempo real
+
+Las tres gráficas leen `sim.serie` y se redibujan con `sim.version`, con el tiempo simulado como eje común:
+
+| Gráfica | Magnitudes | Qué evidencia |
+|---|---|---|
+| 1 | ω [rad/s] y α [rad/s²] contra t, con el límite de 2 rpm | α constante mientras dura el torque; ω lineal hasta la velocidad de diseño |
+| 2 | a [g₀] contra t, con la banda aceptable de 0,8 a 1,1 g₀ | El criterio principal de habitabilidad, legible de un vistazo |
+| 3 | L [kg·m²/s] contra t | L crece con el torque y queda horizontal al apagar los propulsores, aunque el ascensor se mueva |
+
+Los colores salen de las variables CSS de la consola, así que siguen el tema claro y el oscuro.
+
+## Calidad y despliegue
+
+`pnpm lint` corre ESLint con una regla específica para `src/fisica/`: no puede importar nada de `src/app/`, ni React,
+ni uPlot, no puede usar `document`, `window` ni `requestAnimationFrame`, y tampoco `Math.random()` ni `Date.now()`.
+La separación entre física y renderizado queda así verificada por el analizador de código (Avance 1, sección 6.1), además
+de por `tsconfig.json`, que revisa la librería sin los tipos del DOM.
+
+`typescript-eslint` todavía no funciona con TypeScript 7, así que `package.json` instala TypeScript 6 con el nombre
+`typescript` (lo que usa ESLint) y TypeScript 7 como `@typescript/native` (el que ejecuta `tsc`). Los dos conviven sin
+conflicto; ver la guía de migración de TypeScript 7.
+
+`.github/workflows/desplegar.yml` ejecuta en cada push y en cada pull request: `pnpm lint`, `pnpm typecheck` y
+`pnpm test`. Solo si los tres pasan y el cambio está en `main`, compila con `pnpm build` y publica `dist/` en GitHub Pages.
+Si una prueba falla, el despliegue se detiene y la versión publicada sigue siendo la última correcta. Para activarlo:
+*Settings → Pages → Build and deployment → Source: GitHub Actions*.
